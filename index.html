@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ဘုရားဝတ်တက် စစ်ဆေးရန်</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Pyidaungsu&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Pyidaungsu', sans-serif;
@@ -13,11 +14,17 @@
             display: grid;
             gap: 0.5rem;
         }
+        /* Default for larger screens */
+        .grid-cols-dynamic {
+            grid-template-columns: repeat(12, minmax(0, 1fr));
+        }
+        /* For tablets */
         @media (max-width: 1280px) {
             .grid-cols-dynamic {
                 grid-template-columns: repeat(8, minmax(0, 1fr));
             }
         }
+        /* For mobile phones */
         @media (max-width: 640px) {
             .grid-cols-dynamic {
                 grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -148,11 +155,10 @@
                 lines.forEach(line => {
                     const [key, name] = line.split(',').map(item => item.trim());
                     if (key && name) {
-                        // အဆောင်နာမည်ကို တစ်ခါတည်းထည့်ဖို့ ပြင်ဆင်ပါ
-                        const dormMatch = name.match(/\(([^)]+)\)/);
-                        const dorm = dormMatch ? `(${dormMatch[1]})` : '';
-                        const cleanName = name.replace(/\([^)]+\)/g, '').trim() + dorm; // ထပ်မပြဖို့
-                        studentData[key] = cleanName;
+                        // FIXED: Simply store the original name from the CSV.
+                        // The parsing will be handled during UI creation.
+                        studentData[key] = name;
+                        
                         const [row, seat] = key.split('-').map(Number);
                         if (row > maxRow) maxRow = row;
                         if (seat > maxSeat) maxSeat = seat;
@@ -165,7 +171,8 @@
                 updateAllLists();
             } catch (error) {
                 console.error('Error loading CSV:', error);
-                alert('စတူဒင့်ဒေတာဖိုင်ကို ဖတ်ယူရာတွင် အမှားအယွင်းဖြစ်ပွားသည်။');
+                // Use a custom modal or a less intrusive notification instead of alert
+                seatingChartContainer.innerHTML = '<p class="text-red-500">Could not load student data. Please check the console for errors.</p>';
             }
         }
 
@@ -185,7 +192,7 @@
             seatingChartContainer.innerHTML = '';
             seatingChartContainer.classList.add('space-y-4');
 
-            for (let row = 2; row <= TOTAL_ROWS; row++) {
+            for (let row = 1; row <= TOTAL_ROWS; row++) { // Start from row 1
                 const rowContainer = document.createElement('div');
                 const rowLabel = document.createElement('div');
                 rowLabel.classList.add('font-bold', 'text-gray-700', 'mb-2', 'text-lg');
@@ -194,8 +201,7 @@
 
                 const rowGrid = document.createElement('div');
                 rowGrid.classList.add('grid', 'grid-cols-dynamic');
-                rowGrid.style.gridTemplateColumns = `repeat(${SEATS_PER_ROW}, minmax(0, 1fr))`;
-
+                
                 for (let seat = 1; seat <= SEATS_PER_ROW; seat++) {
                     const key = `${row}-${seat}`;
                     const studentName = studentData[key] || '';
@@ -205,22 +211,27 @@
                     seatElement.dataset.seat = seat;
 
                     if (studentName) {
-                        const displayName = studentName.split('\n')[0];
+                        // FIXED: Parse the name and dorm separately for display.
                         const dormMatch = studentName.match(/\((.*?)\)/);
                         const dormName = dormMatch ? dormMatch[1] : null;
-                        const dormText = dormName ? `(${dormName})` : ''; // အဆောင်နာမည် တစ်ခါတည်းပဲ ထည့်ပါ
+                        
+                        // The name part, without the dorm.
+                        const displayName = studentName.replace(/\s*\([^)]+\)/g, '').trim();
+                        // The dorm part, with parentheses.
+                        const dormText = dormName ? `(${dormName})` : '';
+                        
                         const colorClasses = (dormName ? (dormColors[dormName] || dormColors.default) : dormColors.default).split(' ');
 
                         seatElement.innerHTML = `<span class="font-bold text-sm">${seat}</span><span class="text-[10px] leading-tight mt-1">${displayName}</span><span class="text-[9px] leading-tight text-gray-500 mt-1">${dormText}</span>`;
                         seatElement.classList.add(...colorClasses, 'cursor-pointer', 'transform', 'hover:scale-110');
-                        seatElement.dataset.name = studentName;
+                        seatElement.dataset.name = studentName; // Keep full name for tooltip/lists
                         seatElement.addEventListener('click', cycleAttendanceState);
                         seatElement.addEventListener('mouseover', showTooltip);
                         seatElement.addEventListener('mouseout', hideTooltip);
                         seatElement.addEventListener('mousemove', moveTooltip);
                     } else {
                         seatElement.classList.add('empty');
-                        seatElement.innerHTML = `<span class="font-bold text-sm">${seat}</span>`;
+                        seatElement.innerHTML = `<span class="font-bold text-sm text-gray-400">${seat}</span>`;
                     }
                     rowGrid.appendChild(seatElement);
                 }
@@ -267,7 +278,18 @@
             } else {
                 buttonElement.disabled = false;
                 buttonElement.classList.remove('opacity-50', 'cursor-not-allowed');
-                seats.forEach(seat => {
+                const sortedSeats = Array.from(seats).sort((a, b) => {
+                    const rowA = parseInt(a.dataset.row, 10);
+                    const seatA = parseInt(a.dataset.seat, 10);
+                    const rowB = parseInt(b.dataset.row, 10);
+                    const seatB = parseInt(b.dataset.seat, 10);
+                    if (rowA !== rowB) {
+                        return rowA - rowB;
+                    }
+                    return seatA - seatB;
+                });
+
+                sortedSeats.forEach(seat => {
                     const listItem = document.createElement('li');
                     listItem.className = `p-2 rounded-md text-sm ${itemColors[state]}`;
                     const row = seat.dataset.row;
@@ -280,33 +302,34 @@
         }
 
         function resetAllSeats() {
-            const allSeats = document.querySelectorAll('.seat');
-            allSeats.forEach(seat => {
-                if (seat.dataset.name) {
-                    seat.classList.remove('absent', 'on-leave');
-                }
-            });
-            updateAllLists();
+            if (confirm('Are you sure you want to reset all attendance records?')) {
+                const allSeats = document.querySelectorAll('.seat');
+                allSeats.forEach(seat => {
+                    if (seat.dataset.name) {
+                        seat.classList.remove('absent', 'on-leave');
+                    }
+                });
+                updateAllLists();
+            }
         }
 
         // --- Copy Functions ---
         function copyList(state, buttonElement) {
-            const seats = document.querySelectorAll(`.seat.${state}`);
-            if (seats.length === 0) return;
+            const listItems = state === 'absent' ? absentList.querySelectorAll('li') : onLeaveList.querySelectorAll('li');
+            if (listItems.length === 0 || (listItems.length === 1 && listItems[0].classList.contains('text-gray-500'))) return;
 
             const dateString = getBurmeseDate();
-            const title = state === 'absent' ? 'ပျက်ကွက်စာရင်း' : 'ခွင့်ရှိသူစာရင်း';
-            let listText = `${title} (${dateString}):\n\n`;
-            seats.forEach(seat => {
-                const row = seat.dataset.row;
-                const seatNum = seat.dataset.seat;
-                const studentName = (seat.dataset.name || '').replace(/\n/g, ' ');
-                listText += `အတန်း ${row}၊ ခုံ ${seatNum}: ${studentName}\n`;
+            const title = state === 'absent' ? 'ဘုရားဝတ်တက် ပျက်ကွက်စာရင်း' : 'ဘုရားဝတ်တက် ခွင့်ရှိသူစာရင်း';
+            let listText = `${title}\n(${dateString})\n\n`;
+            
+            listItems.forEach(item => {
+                listText += `${item.textContent}\n`;
             });
 
             const textArea = document.createElement("textarea");
             textArea.value = listText.trim();
             textArea.style.position = "fixed";
+            textArea.style.top = "-9999px";
             textArea.style.left = "-9999px";
             document.body.appendChild(textArea);
             textArea.focus();
@@ -323,7 +346,7 @@
                     buttonElement.className = originalClasses;
                 }, 2000);
             } catch (err) {
-                console.error('ကူးယူရာတွင် အမှားအယွင်းဖြစ်ပွားသည်: ', err);
+                console.error('Failed to copy: ', err);
             }
             document.body.removeChild(textArea);
         }
@@ -352,10 +375,12 @@
         copyLeaveButton.addEventListener('click', () => copyList('on-leave', copyLeaveButton));
 
         // --- Initial Load ---
-        loadStudentData();
-        const todayDate = getBurmeseDate();
-        currentDateAbsentEl.textContent = todayDate;
-        currentDateLeaveEl.textContent = todayDate;
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStudentData();
+            const todayDate = getBurmeseDate();
+            currentDateAbsentEl.textContent = todayDate;
+            currentDateLeaveEl.textContent = todayDate;
+        });
     </script>
 </body>
 </html>
