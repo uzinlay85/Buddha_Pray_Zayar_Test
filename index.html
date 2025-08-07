@@ -9,16 +9,17 @@
         body {
             font-family: 'Pyidaungsu', sans-serif;
         }
-        .grid-cols-16 {
-            grid-template-columns: repeat(16, minmax(0, 1fr));
+        .grid-cols-dynamic {
+            display: grid;
+            gap: 0.5rem;
         }
         @media (max-width: 1280px) {
-            .grid-cols-16 {
+            .grid-cols-dynamic {
                 grid-template-columns: repeat(8, minmax(0, 1fr));
             }
         }
         @media (max-width: 640px) {
-            .grid-cols-16 {
+            .grid-cols-dynamic {
                 grid-template-columns: repeat(4, minmax(0, 1fr));
             }
         }
@@ -57,7 +58,7 @@
                 <div id="seating-chart-container" class="p-4 bg-gray-50 border rounded-b-lg overflow-x-auto"></div>
                 <div class="mt-4 flex justify-center">
                     <button id="reset-button" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105">
-                        အားလုံးကိုပြန်ဲလည်သတ်မှတ်ရန်
+                        အားလုံးကိုပြန်လည်သတ်မှတ်ရန်
                     </button>
                 </div>
             </div>
@@ -106,8 +107,6 @@
         const currentDateLeaveEl = document.getElementById('current-date-leave');
 
         // --- Constants ---
-        const TOTAL_ROWS = 15;
-        const SEATS_PER_ROW = 16;
         const dormColors = {
             'လှ': 'bg-sky-100 text-sky-800 border-sky-200',
             'သိမ်': 'bg-teal-100 text-teal-800 border-teal-200',
@@ -129,6 +128,8 @@
 
         // --- State ---
         let studentData = {};
+        let TOTAL_ROWS = 0;
+        let SEATS_PER_ROW = 0;
 
         // --- Utility Functions ---
         async function loadStudentData() {
@@ -137,12 +138,21 @@
                 const text = await response.text();
                 const lines = text.trim().split('\n').slice(1); // Skip header
                 studentData = {};
+                let maxRow = 0;
+                let maxSeat = 0;
+
                 lines.forEach(line => {
                     const [key, name] = line.split(',').map(item => item.trim());
                     if (key && name) {
                         studentData[key] = name;
+                        const [row, seat] = key.split('-').map(Number);
+                        if (row > maxRow) maxRow = row;
+                        if (seat > maxSeat) maxSeat = seat;
                     }
                 });
+
+                TOTAL_ROWS = maxRow;
+                SEATS_PER_ROW = maxSeat;
                 createSeatingChart();
                 updateAllLists();
             } catch (error) {
@@ -167,9 +177,7 @@
             seatingChartContainer.innerHTML = '';
             seatingChartContainer.classList.add('space-y-4');
 
-            for (let row = 1; row <= TOTAL_ROWS; row++) {
-                if (row === 1) continue;
-
+            for (let row = 2; row <= TOTAL_ROWS; row++) {
                 const rowContainer = document.createElement('div');
                 const rowLabel = document.createElement('div');
                 rowLabel.classList.add('font-bold', 'text-gray-700', 'mb-2', 'text-lg');
@@ -177,7 +185,8 @@
                 rowContainer.appendChild(rowLabel);
 
                 const rowGrid = document.createElement('div');
-                rowGrid.classList.add('grid', 'grid-cols-16', 'gap-2');
+                rowGrid.classList.add('grid', 'grid-cols-dynamic');
+                rowGrid.style.gridTemplateColumns = `repeat(${SEATS_PER_ROW}, minmax(0, 1fr))`;
 
                 for (let seat = 1; seat <= SEATS_PER_ROW; seat++) {
                     const key = `${row}-${seat}`;
