@@ -13,9 +13,7 @@
         .grid-cols-dynamic {
             display: grid;
             gap: 0.5rem;
-        }
-        /* Default for larger screens */
-        .grid-cols-dynamic {
+            /* Default for larger screens, 12 columns */
             grid-template-columns: repeat(12, minmax(0, 1fr));
         }
         /* For tablets */
@@ -138,9 +136,7 @@
         };
 
         // --- State ---
-        let studentData = {};
-        let TOTAL_ROWS = 0;
-        let SEATS_PER_ROW = 0;
+        let studentData = {}; // Will be indexed by C_Num
 
         // --- Utility Functions ---
         async function loadStudentData() {
@@ -149,30 +145,35 @@
                 const text = await response.text();
                 const lines = text.trim().split('\n').slice(1); // Skip header
                 studentData = {};
-                let maxRow = 0;
-                let maxSeat = 0;
-
+                
                 lines.forEach(line => {
-                    const [key, name] = line.split(',').map(item => item.trim());
-                    if (key && name) {
-                        // FIXED: Simply store the original name from the CSV.
-                        // The parsing will be handled during UI creation.
-                        studentData[key] = name;
-                        
-                        const [row, seat] = key.split('-').map(Number);
-                        if (row > maxRow) maxRow = row;
-                        if (seat > maxSeat) maxSeat = seat;
+                    const columns = line.split(',');
+                    const name = columns[2]?.trim();
+                    const school = columns[4]?.trim();
+                    const c_num_str = columns[5]?.trim();
+
+                    if (c_num_str && name) {
+                        const c_num = parseInt(c_num_str, 10);
+                        if (!isNaN(c_num)) {
+                            const fullDormName = school || '';
+                            const dormParts = fullDormName.split('-');
+                            const dormCode = dormParts.length > 1 ? dormParts[1] : 'default';
+
+                            studentData[c_num] = {
+                                name: name,
+                                school: fullDormName,
+                                dormCode: dormCode,
+                                fullName: `${name} (${fullDormName})`
+                            };
+                        }
                     }
                 });
 
-                TOTAL_ROWS = maxRow;
-                SEATS_PER_ROW = maxSeat;
                 createSeatingChart();
                 updateAllLists();
             } catch (error) {
                 console.error('Error loading CSV:', error);
-                // Use a custom modal or a less intrusive notification instead of alert
-                seatingChartContainer.innerHTML = '<p class="text-red-500">Could not load student data. Please check the console for errors.</p>';
+                seatingChartContainer.innerHTML = '<p class="text-red-500 text-center">ကျောင်းသားစာရင်းဖိုင်ကို ဖတ်ရာတွင် အမှားအယွင်းဖြစ်ပွားပါသည်။</p>';
             }
         }
 
@@ -192,8 +193,17 @@
             seatingChartContainer.innerHTML = '';
             seatingChartContainer.classList.add('space-y-4');
 
-            // MODIFIED: Start the loop from row 2 as requested by the user.
-            for (let row = 2; row <= TOTAL_ROWS; row++) { 
+            const SEATS_PER_ROW = 12;
+            const seatNumbers = Object.keys(studentData).map(Number);
+            if (seatNumbers.length === 0) {
+                 seatingChartContainer.innerHTML = '<p class="text-gray-500 text-center">ခုံနံပါတ်ပါသော ကျောင်းသားဒေတာ မရှိပါ။</p>';
+                 return;
+            }
+
+            const maxSeatNum = Math.max(...seatNumbers);
+            const TOTAL_ROWS = Math.ceil(maxSeatNum / SEATS_PER_ROW);
+
+            for (let row = 1; row <= TOTAL_ROWS; row++) {
                 const rowContainer = document.createElement('div');
                 const rowLabel = document.createElement('div');
                 rowLabel.classList.add('font-bold', 'text-gray-700', 'mb-2', 'text-lg');
@@ -202,37 +212,35 @@
 
                 const rowGrid = document.createElement('div');
                 rowGrid.classList.add('grid', 'grid-cols-dynamic');
-                
-                for (let seat = 1; seat <= SEATS_PER_ROW; seat++) {
-                    const key = `${row}-${seat}`;
-                    const studentName = studentData[key] || '';
+
+                for (let seatInRow = 1; seatInRow <= SEATS_PER_ROW; seatInRow++) {
+                    const seatNum = (row - 1) * SEATS_PER_ROW + seatInRow;
+                    
+                    // Don't create seat elements beyond the maximum seat number found in the data
+                    if (seatNum > maxSeatNum) {
+                        const emptySeatElement = document.createElement('div');
+                        emptySeatElement.classList.add('seat', 'empty', 'opacity-0'); // Make it invisible but take up space
+                        rowGrid.appendChild(emptySeatElement);
+                        continue;
+                    }
+
+                    const student = studentData[seatNum];
                     const seatElement = document.createElement('div');
                     seatElement.classList.add('seat', 'h-24', 'flex', 'flex-col', 'items-center', 'justify-center', 'rounded-md', 'p-1', 'transition-all', 'duration-200', 'ease-in-out', 'text-center', 'border');
-                    seatElement.dataset.row = row;
-                    seatElement.dataset.seat = seat;
+                    seatElement.dataset.seatNum = seatNum;
 
-                    if (studentName) {
-                        // FIXED: Parse the name and dorm separately for display.
-                        const dormMatch = studentName.match(/\((.*?)\)/);
-                        const dormName = dormMatch ? dormMatch[1] : null;
-                        
-                        // The name part, without the dorm.
-                        const displayName = studentName.replace(/\s*\([^)]+\)/g, '').trim();
-                        // The dorm part, with parentheses.
-                        const dormText = dormName ? `(${dormName})` : '';
-                        
-                        const colorClasses = (dormName ? (dormColors[dormName] || dormColors.default) : dormColors.default).split(' ');
-
-                        seatElement.innerHTML = `<span class="font-bold text-sm">${seat}</span><span class="text-[10px] leading-tight mt-1">${displayName}</span><span class="text-[9px] leading-tight text-gray-500 mt-1">${dormText}</span>`;
+                    if (student) {
+                        const colorClasses = (dormColors[student.dormCode] || dormColors.default).split(' ');
+                        seatElement.innerHTML = `<span class="font-bold text-sm">${seatNum}</span><span class="text-[10px] leading-tight mt-1">${student.name}</span><span class="text-[9px] leading-tight text-gray-500 mt-1">(${student.school})</span>`;
                         seatElement.classList.add(...colorClasses, 'cursor-pointer', 'transform', 'hover:scale-110');
-                        seatElement.dataset.name = studentName; // Keep full name for tooltip/lists
+                        seatElement.dataset.name = student.fullName;
                         seatElement.addEventListener('click', cycleAttendanceState);
                         seatElement.addEventListener('mouseover', showTooltip);
                         seatElement.addEventListener('mouseout', hideTooltip);
                         seatElement.addEventListener('mousemove', moveTooltip);
                     } else {
                         seatElement.classList.add('empty');
-                        seatElement.innerHTML = `<span class="font-bold text-sm text-gray-400">${seat}</span>`;
+                        seatElement.innerHTML = `<span class="font-bold text-sm text-gray-400">${seatNum}</span>`;
                     }
                     rowGrid.appendChild(seatElement);
                 }
@@ -280,30 +288,21 @@
                 buttonElement.disabled = false;
                 buttonElement.classList.remove('opacity-50', 'cursor-not-allowed');
                 const sortedSeats = Array.from(seats).sort((a, b) => {
-                    const rowA = parseInt(a.dataset.row, 10);
-                    const seatA = parseInt(a.dataset.seat, 10);
-                    const rowB = parseInt(b.dataset.row, 10);
-                    const seatB = parseInt(b.dataset.seat, 10);
-                    if (rowA !== rowB) {
-                        return rowA - rowB;
-                    }
-                    return seatA - seatB;
+                    return parseInt(a.dataset.seatNum, 10) - parseInt(b.dataset.seatNum, 10);
                 });
 
                 sortedSeats.forEach(seat => {
                     const listItem = document.createElement('li');
                     listItem.className = `p-2 rounded-md text-sm ${itemColors[state]}`;
-                    const row = seat.dataset.row;
-                    const seatNum = seat.dataset.seat;
-                    const studentName = (seat.dataset.name || '').replace(/\n/g, ' ');
-                    listItem.textContent = `အတန်း ${row}၊ ခုံ ${seatNum}: ${studentName}`;
+                    const seatNum = seat.dataset.seatNum;
+                    const studentName = seat.dataset.name || '';
+                    listItem.textContent = `ခုံ ${seatNum}: ${studentName}`;
                     listElement.appendChild(listItem);
                 });
             }
         }
 
         function resetAllSeats() {
-            // Use a custom modal instead of confirm
             const modal = document.createElement('div');
             modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50';
             modal.innerHTML = `
