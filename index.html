@@ -148,7 +148,11 @@
                 lines.forEach(line => {
                     const [key, name] = line.split(',').map(item => item.trim());
                     if (key && name) {
-                        studentData[key] = name;
+                        // အဆောင်နာမည်ကို တစ်ခါတည်းထည့်ဖို့ ပြင်ဆင်ပါ
+                        const dormMatch = name.match(/\(([^)]+)\)/);
+                        const dorm = dormMatch ? `(${dormMatch[1]})` : '';
+                        const cleanName = name.replace(/\([^)]+\)/g, '').trim() + dorm; // ထပ်မပြဖို့
+                        studentData[key] = cleanName;
                         const [row, seat] = key.split('-').map(Number);
                         if (row > maxRow) maxRow = row;
                         if (seat > maxSeat) maxSeat = seat;
