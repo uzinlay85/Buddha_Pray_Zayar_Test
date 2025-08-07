@@ -139,6 +139,16 @@
         let studentData = {}; // Will be indexed by C_Num
 
         // --- Utility Functions ---
+        // NEW FUNCTION to convert Burmese numerals to Western numerals
+        function fromBurmeseNumeral(burmeseNum) {
+            if (!burmeseNum) return '';
+            const numeralMap = {
+                '၀': '0', '၁': '1', '၂': '2', '၃': '3', '၄': '4',
+                '၅': '5', '၆': '6', '၇': '7', '၈': '8', '၉': '9'
+            };
+            return burmeseNum.replace(/[၀-၉]/g, m => numeralMap[m]);
+        }
+        
         async function loadStudentData() {
             try {
                 const response = await fetch('students.csv');
@@ -150,10 +160,13 @@
                     const columns = line.split(',');
                     const name = columns[2]?.trim();
                     const school = columns[4]?.trim();
-                    const c_num_str = columns[5]?.trim();
+                    const c_num_str_burmese = columns[5]?.trim();
 
-                    if (c_num_str && name) {
-                        const c_num = parseInt(c_num_str, 10);
+                    if (c_num_str_burmese && name) {
+                        // MODIFIED: Convert Burmese numerals to Western before parsing
+                        const c_num_str_western = fromBurmeseNumeral(c_num_str_burmese);
+                        const c_num = parseInt(c_num_str_western, 10);
+
                         if (!isNaN(c_num)) {
                             const fullDormName = school || '';
                             const dormParts = fullDormName.split('-');
@@ -216,10 +229,9 @@
                 for (let seatInRow = 1; seatInRow <= SEATS_PER_ROW; seatInRow++) {
                     const seatNum = (row - 1) * SEATS_PER_ROW + seatInRow;
                     
-                    // Don't create seat elements beyond the maximum seat number found in the data
                     if (seatNum > maxSeatNum) {
                         const emptySeatElement = document.createElement('div');
-                        emptySeatElement.classList.add('seat', 'empty', 'opacity-0'); // Make it invisible but take up space
+                        emptySeatElement.classList.add('seat', 'empty', 'opacity-0');
                         rowGrid.appendChild(emptySeatElement);
                         continue;
                     }
