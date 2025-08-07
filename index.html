@@ -13,19 +13,19 @@
         .grid-cols-dynamic {
             display: grid;
             gap: 0.5rem;
-            /* Default for larger screens, 12 columns */
-            grid-template-columns: repeat(12, minmax(0, 1fr));
+            /* Default for larger screens, 16 columns for better spacing */
+            grid-template-columns: repeat(16, minmax(0, 1fr));
         }
         /* For tablets */
         @media (max-width: 1280px) {
             .grid-cols-dynamic {
-                grid-template-columns: repeat(8, minmax(0, 1fr));
+                grid-template-columns: repeat(12, minmax(0, 1fr));
             }
         }
         /* For mobile phones */
         @media (max-width: 640px) {
             .grid-cols-dynamic {
-                grid-template-columns: repeat(4, minmax(0, 1fr));
+                grid-template-columns: repeat(6, minmax(0, 1fr));
             }
         }
         #seat-tooltip {
@@ -139,16 +139,6 @@
         let studentData = {}; // Will be indexed by C_Num
 
         // --- Utility Functions ---
-        // NEW FUNCTION to convert Burmese numerals to Western numerals
-        function fromBurmeseNumeral(burmeseNum) {
-            if (!burmeseNum) return '';
-            const numeralMap = {
-                '၀': '0', '၁': '1', '၂': '2', '၃': '3', '၄': '4',
-                '၅': '5', '၆': '6', '၇': '7', '၈': '8', '၉': '9'
-            };
-            return burmeseNum.replace(/[၀-၉]/g, m => numeralMap[m]);
-        }
-        
         async function loadStudentData() {
             try {
                 const response = await fetch('students.csv');
@@ -158,25 +148,16 @@
                 
                 lines.forEach(line => {
                     const columns = line.split(',');
-                    const name = columns[2]?.trim();
-                    const school = columns[4]?.trim();
-                    const c_num_str_burmese = columns[5]?.trim();
+                    const c_num_str = columns[0]?.trim();
+                    const nameWithSchool = (columns[1] || '').trim().replace(/"/g, '');
+                    const school = (columns[2] || '').trim().replace(/"/g, '');
 
-                    if (c_num_str_burmese && name) {
-                        // MODIFIED: Convert Burmese numerals to Western before parsing
-                        const c_num_str_western = fromBurmeseNumeral(c_num_str_burmese);
-                        const c_num = parseInt(c_num_str_western, 10);
-
+                    if (c_num_str && nameWithSchool) {
+                        const c_num = parseInt(c_num_str, 10);
                         if (!isNaN(c_num)) {
-                            const fullDormName = school || '';
-                            const dormParts = fullDormName.split('-');
-                            const dormCode = dormParts.length > 1 ? dormParts[1] : 'default';
-
                             studentData[c_num] = {
-                                name: name,
-                                school: fullDormName,
-                                dormCode: dormCode,
-                                fullName: `${name} (${fullDormName})`
+                                name: nameWithSchool,
+                                school: school,
                             };
                         }
                     }
@@ -206,7 +187,7 @@
             seatingChartContainer.innerHTML = '';
             seatingChartContainer.classList.add('space-y-4');
 
-            const SEATS_PER_ROW = 12;
+            const SEATS_PER_ROW = 16;
             const seatNumbers = Object.keys(studentData).map(Number);
             if (seatNumbers.length === 0) {
                  seatingChartContainer.innerHTML = '<p class="text-gray-500 text-center">ခုံနံပါတ်ပါသော ကျောင်းသားဒေတာ မရှိပါ။</p>';
@@ -242,10 +223,10 @@
                     seatElement.dataset.seatNum = seatNum;
 
                     if (student) {
-                        const colorClasses = (dormColors[student.dormCode] || dormColors.default).split(' ');
-                        seatElement.innerHTML = `<span class="font-bold text-sm">${seatNum}</span><span class="text-[10px] leading-tight mt-1">${student.name}</span><span class="text-[9px] leading-tight text-gray-500 mt-1">(${student.school})</span>`;
+                        const colorClasses = (dormColors[student.school] || dormColors.default).split(' ');
+                        seatElement.innerHTML = `<span class="font-bold text-sm">${seatNum}</span><span class="text-[10px] leading-tight mt-1">${student.name}</span>`;
                         seatElement.classList.add(...colorClasses, 'cursor-pointer', 'transform', 'hover:scale-110');
-                        seatElement.dataset.name = student.fullName;
+                        seatElement.dataset.name = student.name;
                         seatElement.addEventListener('click', cycleAttendanceState);
                         seatElement.addEventListener('mouseover', showTooltip);
                         seatElement.addEventListener('mouseout', hideTooltip);
