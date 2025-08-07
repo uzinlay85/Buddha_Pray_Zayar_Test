@@ -13,16 +13,18 @@
         .grid-cols-dynamic {
             display: grid;
             gap: 0.5rem;
-            /* Default for larger screens, 16 columns for better spacing */
             grid-template-columns: repeat(16, minmax(0, 1fr));
         }
-        /* For tablets */
         @media (max-width: 1280px) {
             .grid-cols-dynamic {
                 grid-template-columns: repeat(12, minmax(0, 1fr));
             }
         }
-        /* For mobile phones */
+        @media (max-width: 768px) {
+            .grid-cols-dynamic {
+                grid-template-columns: repeat(8, minmax(0, 1fr));
+            }
+        }
         @media (max-width: 640px) {
             .grid-cols-dynamic {
                 grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -34,12 +36,12 @@
             transition: opacity 0.2s;
         }
         .seat.absent {
-            border: 3px solid #ef4444 !important; /* red-500 */
+            border: 3px solid #ef4444 !important;
             transform: scale(1.05);
             box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
         }
         .seat.on-leave {
-            border: 3px solid #eab308 !important; /* yellow-500 */
+            border: 3px solid #eab308 !important;
             transform: scale(1.05);
             box-shadow: 0 0 8px rgba(234, 179, 8, 0.5);
         }
@@ -48,8 +50,8 @@
             border: 1px dashed #d1d5db;
         }
         .list-container {
-            min-height: 100px; /* Minimum height when empty */
-            transition: height 0.3s ease; /* Smooth height transition */
+            min-height: 100px;
+            transition: height 0.3s ease;
         }
     </style>
 </head>
@@ -136,7 +138,7 @@
         };
 
         // --- State ---
-        let studentData = {}; // Will be indexed by C_Num
+        let studentDataByClass = {}; // Data will be grouped by class
 
         // --- Utility Functions ---
         async function loadStudentData() {
@@ -144,22 +146,23 @@
                 const response = await fetch('students.csv');
                 const text = await response.text();
                 const lines = text.trim().split('\n').slice(1); // Skip header
-                studentData = {};
+                studentDataByClass = {};
                 
                 lines.forEach(line => {
                     const columns = line.split(',');
-                    const c_num_str = columns[0]?.trim();
-                    const nameWithSchool = (columns[1] || '').trim().replace(/"/g, '');
-                    const school = (columns[2] || '').trim().replace(/"/g, '');
+                    const classNum = columns[0]?.trim();
+                    const seatNum = columns[1]?.trim();
+                    const name = (columns[2] || '').trim().replace(/"/g, '');
+                    const school = (columns[3] || '').trim().replace(/"/g, '');
 
-                    if (c_num_str && nameWithSchool) {
-                        const c_num = parseInt(c_num_str, 10);
-                        if (!isNaN(c_num)) {
-                            studentData[c_num] = {
-                                name: nameWithSchool,
-                                school: school,
-                            };
+                    if (classNum && seatNum && name) {
+                        if (!studentDataByClass[classNum]) {
+                            studentDataByClass[classNum] = {};
                         }
+                        studentDataByClass[classNum][seatNum] = {
+                            name: name,
+                            school: school,
+                        };
                     }
                 });
 
@@ -188,46 +191,37 @@
             seatingChartContainer.classList.add('space-y-4');
 
             const SEATS_PER_ROW = 16;
-            const seatNumbers = Object.keys(studentData).map(Number);
-            if (seatNumbers.length === 0) {
-                 seatingChartContainer.innerHTML = '<p class="text-gray-500 text-center">ခုံနံပါတ်ပါသော ကျောင်းသားဒေတာ မရှိပါ။</p>';
-                 return;
-            }
+            const sortedClasses = Object.keys(studentDataByClass).sort((a, b) => parseInt(a) - parseInt(b));
 
-            const maxSeatNum = Math.max(...seatNumbers);
-            const TOTAL_ROWS = Math.ceil(maxSeatNum / SEATS_PER_ROW);
+            for (const classNum of sortedClasses) {
+                // Skip class 1 as requested
+                if (parseInt(classNum) < 2) {
+                    continue;
+                }
 
-            // MODIFIED: Start the loop from row 2 as requested.
-            for (let row = 2; row <= TOTAL_ROWS; row++) {
+                const classData = studentDataByClass[classNum];
+                
                 const rowContainer = document.createElement('div');
                 const rowLabel = document.createElement('div');
                 rowLabel.classList.add('font-bold', 'text-gray-700', 'mb-2', 'text-lg');
-                rowLabel.textContent = `အတန်း - ${row}`;
+                rowLabel.textContent = `အတန်း - ${classNum}`;
                 rowContainer.appendChild(rowLabel);
 
                 const rowGrid = document.createElement('div');
                 rowGrid.classList.add('grid', 'grid-cols-dynamic');
 
-                for (let seatInRow = 1; seatInRow <= SEATS_PER_ROW; seatInRow++) {
-                    const seatNum = (row - 1) * SEATS_PER_ROW + seatInRow;
-                    
-                    if (seatNum > maxSeatNum) {
-                        const emptySeatElement = document.createElement('div');
-                        emptySeatElement.classList.add('seat', 'empty', 'opacity-0');
-                        rowGrid.appendChild(emptySeatElement);
-                        continue;
-                    }
-
-                    const student = studentData[seatNum];
+                for (let seatNum = 1; seatNum <= SEATS_PER_ROW; seatNum++) {
+                    const student = classData[seatNum];
                     const seatElement = document.createElement('div');
                     seatElement.classList.add('seat', 'h-24', 'flex', 'flex-col', 'items-center', 'justify-center', 'rounded-md', 'p-1', 'transition-all', 'duration-200', 'ease-in-out', 'text-center', 'border');
+                    seatElement.dataset.classNum = classNum;
                     seatElement.dataset.seatNum = seatNum;
 
                     if (student) {
                         const colorClasses = (dormColors[student.school] || dormColors.default).split(' ');
-                        seatElement.innerHTML = `<span class="font-bold text-sm">${seatNum}</span><span class="text-[10px] leading-tight mt-1">${student.name}</span>`;
+                        seatElement.innerHTML = `<span class="font-bold text-sm">${seatNum}</span><span class="text-[10px] leading-tight mt-1">${student.name} (${student.school})</span>`;
                         seatElement.classList.add(...colorClasses, 'cursor-pointer', 'transform', 'hover:scale-110');
-                        seatElement.dataset.name = student.name;
+                        seatElement.dataset.name = `${student.name} (${student.school})`;
                         seatElement.addEventListener('click', cycleAttendanceState);
                         seatElement.addEventListener('mouseover', showTooltip);
                         seatElement.addEventListener('mouseout', hideTooltip);
@@ -282,15 +276,21 @@
                 buttonElement.disabled = false;
                 buttonElement.classList.remove('opacity-50', 'cursor-not-allowed');
                 const sortedSeats = Array.from(seats).sort((a, b) => {
-                    return parseInt(a.dataset.seatNum, 10) - parseInt(b.dataset.seatNum, 10);
+                    const classA = parseInt(a.dataset.classNum, 10);
+                    const seatA = parseInt(a.dataset.seatNum, 10);
+                    const classB = parseInt(b.dataset.classNum, 10);
+                    const seatB = parseInt(b.dataset.seatNum, 10);
+                    if (classA !== classB) return classA - classB;
+                    return seatA - seatB;
                 });
 
                 sortedSeats.forEach(seat => {
                     const listItem = document.createElement('li');
                     listItem.className = `p-2 rounded-md text-sm ${itemColors[state]}`;
+                    const classNum = seat.dataset.classNum;
                     const seatNum = seat.dataset.seatNum;
                     const studentName = seat.dataset.name || '';
-                    listItem.textContent = `ခုံ ${seatNum}: ${studentName}`;
+                    listItem.textContent = `အတန်း ${classNum}၊ ခုံ ${seatNum}: ${studentName}`;
                     listElement.appendChild(listItem);
                 });
             }
