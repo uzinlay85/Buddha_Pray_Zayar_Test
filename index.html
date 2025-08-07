@@ -208,7 +208,7 @@
                         const displayName = studentName.split('\n')[0];
                         const dormMatch = studentName.match(/\((.*?)\)/);
                         const dormName = dormMatch ? dormMatch[1] : null;
-                        const dormText = dormName ? `(${dormName})` : '';
+                        const dormText = dormName ? `(${dormName})` : ''; // အဆောင်နာမည် တစ်ခါတည်းပဲ ထည့်ပါ
                         const colorClasses = (dormName ? (dormColors[dormName] || dormColors.default) : dormColors.default).split(' ');
 
                         seatElement.innerHTML = `<span class="font-bold text-sm">${seat}</span><span class="text-[10px] leading-tight mt-1">${displayName}</span><span class="text-[9px] leading-tight text-gray-500 mt-1">${dormText}</span>`;
