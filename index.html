@@ -5,12 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ဘုရားဝတ်တက် စစ်ဆေးရန်</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Myanmar:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body {
-            font-family: 'Noto Serif Myanmar', sans-serif;
+            font-family: 'Pyidaungsu', sans-serif;
         }
         .grid-cols-16 {
             grid-template-columns: repeat(16, minmax(0, 1fr));
@@ -31,16 +28,12 @@
             transition: opacity 0.2s;
         }
         .seat.absent {
-            background-color: #fee2e2 !important;
-            color: #991b1b !important;
-            border-color: #fecaca !important;
+            border: 3px solid #ef4444 !important; /* red-500 */
             transform: scale(1.05);
             box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
         }
         .seat.on-leave {
-            background-color: #fef9c3 !important;
-            color: #854d0e !important;
-            border-color: #fef08a !important;
+            border: 3px solid #eab308 !important; /* yellow-500 */
             transform: scale(1.05);
             box-shadow: 0 0 8px rgba(234, 179, 8, 0.5);
         }
@@ -62,12 +55,9 @@
             <div class="flex-grow">
                 <div class="bg-blue-600 text-white text-center py-2 rounded-t-lg font-bold shadow-md">စာချဆရာတော်များနှင့် ကျမ်းပြီးသံဃာတော်များ</div>
                 <div id="seating-chart-container" class="p-4 bg-gray-50 border rounded-b-lg overflow-x-auto"></div>
-                <div class="mt-4 flex justify-center gap-4">
+                <div class="mt-4 flex justify-center">
                     <button id="reset-button" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105">
-                        အားလုံးကိုပြန်လည်သတ်မှတ်ရန်
-                    </button>
-                    <button id="download-csv-button" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105">
-                        CSV ဖိုင်အဖြစ်ဒေါင်းလုဒ်လုပ်ရန်
+                        အားလုံးကိုပြန်ဲလည်သတ်မှတ်ရန်
                     </button>
                 </div>
             </div>
@@ -111,7 +101,6 @@
         const resetButton = document.getElementById('reset-button');
         const copyAbsentButton = document.getElementById('copy-absent-button');
         const copyLeaveButton = document.getElementById('copy-leave-button');
-        const downloadCsvButton = document.getElementById('download-csv-button');
         const tooltip = document.getElementById('seat-tooltip');
         const currentDateAbsentEl = document.getElementById('current-date-absent');
         const currentDateLeaveEl = document.getElementById('current-date-leave');
@@ -283,7 +272,7 @@
             updateAllLists();
         }
 
-        // --- Copy and Download Functions ---
+        // --- Copy Functions ---
         function copyList(state, buttonElement) {
             const seats = document.querySelectorAll(`.seat.${state}`);
             if (seats.length === 0) return;
@@ -322,39 +311,6 @@
             document.body.removeChild(textArea);
         }
 
-        function downloadAttendanceCSV() {
-            const dateString = getBurmeseDate();
-            let csvContent = "Row,Seat,Name,Status\n";
-            const absentSeats = document.querySelectorAll('.seat.absent');
-            const onLeaveSeats = document.querySelectorAll('.seat.on-leave');
-
-            // Combine absent and on-leave seats
-            const relevantSeats = [...absentSeats, ...onLeaveSeats];
-
-            if (relevantSeats.length === 0) {
-                alert('ပျက်ကွက်သူ သို့မဟုတ် ခွင့်ရှိသူ မရှိပါ။ CSV ဖိုင်ထုတ်ရန်မလိုအပ်ပါ။');
-                return;
-            }
-
-            relevantSeats.forEach(seat => {
-                const row = seat.dataset.row;
-                const seatNum = seat.dataset.seat;
-                const studentName = (seat.dataset.name || '').replace(/\n/g, ' ').replace(/,/g, ' ');
-                const status = seat.classList.contains('absent') ? 'ပျက်ကွက်' : 'ခွင့်ရှိသူ';
-                csvContent += `${row},${seatNum},${studentName},${status}\n`;
-            });
-
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.setAttribute('href', url);
-            link.setAttribute('download', `attendance_absent_onleave_${dateString}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-        }
-
         function showTooltip(event) {
             const seat = event.currentTarget;
             const studentName = seat.dataset.name;
@@ -377,7 +333,6 @@
         resetButton.addEventListener('click', resetAllSeats);
         copyAbsentButton.addEventListener('click', () => copyList('absent', copyAbsentButton));
         copyLeaveButton.addEventListener('click', () => copyList('on-leave', copyLeaveButton));
-        downloadCsvButton.addEventListener('click', downloadAttendanceCSV);
 
         // --- Initial Load ---
         loadStudentData();
