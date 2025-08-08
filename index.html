@@ -143,17 +143,14 @@
         // --- Utility Functions ---
         async function loadStudentData() {
             try {
-                const response = await fetch('students.csv');
-                const text = await response.text();
-                const lines = text.trim().split('\n').slice(1); // Skip header
+                // MODIFIED: Fetching students.json instead of students.csv
+                const response = await fetch('students.json');
+                const students = await response.json();
                 studentDataByClass = {};
                 
-                lines.forEach(line => {
-                    const columns = line.split(',');
-                    const classNum = columns[0]?.trim();
-                    const seatNum = columns[1]?.trim();
-                    const name = (columns[2] || '').trim().replace(/"/g, '');
-                    const school = (columns[3] || '').trim().replace(/"/g, '');
+                // MODIFIED: Processing JSON data
+                students.forEach(student => {
+                    const { Class: classNum, Seat: seatNum, Name: name, School: school } = student;
 
                     if (classNum && seatNum && name) {
                         if (!studentDataByClass[classNum]) {
@@ -169,8 +166,8 @@
                 createSeatingChart();
                 updateAllLists();
             } catch (error) {
-                console.error('Error loading CSV:', error);
-                seatingChartContainer.innerHTML = '<p class="text-red-500 text-center">ကျောင်းသားစာရင်းဖိုင်ကို ဖတ်ရာတွင် အမှားအယွင်းဖြစ်ပွားပါသည်။</p>';
+                console.error('Error loading JSON:', error);
+                seatingChartContainer.innerHTML = '<p class="text-red-500 text-center">ကျောင်းသားစာရင်းဖိုင် (JSON) ကို ဖတ်ရာတွင် အမှားအယွင်းဖြစ်ပွားပါသည်။</p>';
             }
         }
 
@@ -194,7 +191,6 @@
             const sortedClasses = Object.keys(studentDataByClass).sort((a, b) => parseInt(a) - parseInt(b));
 
             for (const classNum of sortedClasses) {
-                // Skip class 1 as requested
                 if (parseInt(classNum) < 2) {
                     continue;
                 }
