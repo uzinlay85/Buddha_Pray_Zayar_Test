@@ -10,25 +10,9 @@
         body {
             font-family: 'Pyidaungsu', sans-serif;
         }
-        .grid-cols-dynamic {
+        .grid-container {
             display: grid;
             gap: 0.5rem;
-            grid-template-columns: repeat(16, minmax(0, 1fr));
-        }
-        @media (max-width: 1280px) {
-            .grid-cols-dynamic {
-                grid-template-columns: repeat(12, minmax(0, 1fr));
-            }
-        }
-        @media (max-width: 768px) {
-            .grid-cols-dynamic {
-                grid-template-columns: repeat(8, minmax(0, 1fr));
-            }
-        }
-        @media (max-width: 640px) {
-            .grid-cols-dynamic {
-                grid-template-columns: repeat(6, minmax(0, 1fr));
-            }
         }
         #seat-tooltip {
             pointer-events: none;
@@ -143,12 +127,10 @@
         // --- Utility Functions ---
         async function loadStudentData() {
             try {
-                // MODIFIED: Fetching students.json instead of students.csv
                 const response = await fetch('students.json');
                 const students = await response.json();
                 studentDataByClass = {};
                 
-                // MODIFIED: Processing JSON data
                 students.forEach(student => {
                     const { Class: classNum, Seat: seatNum, Name: name, School: school } = student;
 
@@ -187,7 +169,6 @@
             seatingChartContainer.innerHTML = '';
             seatingChartContainer.classList.add('space-y-4');
 
-            const SEATS_PER_ROW = 16;
             const sortedClasses = Object.keys(studentDataByClass).sort((a, b) => parseInt(a) - parseInt(b));
 
             for (const classNum of sortedClasses) {
@@ -197,6 +178,10 @@
 
                 const classData = studentDataByClass[classNum];
                 
+                // MODIFIED: Dynamically find the max number of seats for the current class
+                const seatNumbersInClass = Object.keys(classData).map(Number);
+                const maxSeatsInThisRow = seatNumbersInClass.length > 0 ? Math.max(...seatNumbersInClass) : 0;
+
                 const rowContainer = document.createElement('div');
                 const rowLabel = document.createElement('div');
                 rowLabel.classList.add('font-bold', 'text-gray-700', 'mb-2', 'text-lg');
@@ -204,9 +189,12 @@
                 rowContainer.appendChild(rowLabel);
 
                 const rowGrid = document.createElement('div');
-                rowGrid.classList.add('grid', 'grid-cols-dynamic');
+                rowGrid.classList.add('grid-container');
+                // MODIFIED: Dynamically set the number of columns for this specific row's grid
+                rowGrid.style.gridTemplateColumns = `repeat(${maxSeatsInThisRow > 0 ? maxSeatsInThisRow : 1}, minmax(0, 1fr))`;
 
-                for (let seatNum = 1; seatNum <= SEATS_PER_ROW; seatNum++) {
+
+                for (let seatNum = 1; seatNum <= maxSeatsInThisRow; seatNum++) {
                     const student = classData[seatNum];
                     const seatElement = document.createElement('div');
                     seatElement.classList.add('seat', 'h-24', 'flex', 'flex-col', 'items-center', 'justify-center', 'rounded-md', 'p-1', 'transition-all', 'duration-200', 'ease-in-out', 'text-center', 'border');
