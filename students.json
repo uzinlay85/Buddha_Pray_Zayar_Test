@@ -2,7 +2,6 @@
   { "Class": "2", "Seat": "1", "Name": "ဦးဇာနိက", "School": "လှ" },
   { "Class": "2", "Seat": "2", "Name": "ဦးဝိမလာစာရာ", "School": "လှ" },
   { "Class": "2", "Seat": "3", "Name": "ဦးကုမာရ", "School": "လှ" },
-  { "Class": "2", "Seat": "4", "Name": "ဦးဝိဝေကာနန္ဒာ", "School": "လှ" },
   { "Class": "2", "Seat": "5", "Name": "ဦးအာဒိစ္စ", "School": "လှ" },
   { "Class": "2", "Seat": "6", "Name": "ဦးနာဂသေန", "School": "လှ" },
   { "Class": "2", "Seat": "7", "Name": "ဦးကိတ္တိသာရ", "School": "လှ" },
@@ -215,3 +214,4 @@
   { "Class": "15", "Seat": "8", "Name": "ရှင်ပညာနန္ဒ", "School": "ကြည်" },
   { "Class": "15", "Seat": "9", "Name": "ရှင်စန္ဒိမာ", "School": "ကြည်" }
 ]
+
