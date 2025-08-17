@@ -1,126 +1,39 @@
 <!DOCTYPE html>
 <html lang="my">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>ဘုရားဝတ်တက် စစ်ဆေးရေးဇယား</title>
-
-  <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Pyidaungsu&display=swap" rel="stylesheet">
-
-  <!-- Custom CSS -->
+  <link href="https://fonts.googleapis.com/css2?family=Pyidaungsu&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="app.css"/>
+  <!-- jsPDF for PDF export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
-<body class="bg-gray-100 p-2 sm:p-6 md:p-8">
-
-  <!-- Admin Panel Button -->
-  <div class="fixed top-4 right-4 z-50">
-    <button id="admin-panel-button" class="bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg hover:bg-gray-700 transition">
-      Admin Panel
-    </button>
-  </div>
-
-  <div class="max-w-screen-2xl mx-auto bg-white rounded-2xl shadow-lg p-4 sm:p-6">
-    <!-- Header -->
+<body class="bg-gray-100 p-4">
+  <div class="max-w-screen-2xl mx-auto bg-white rounded-2xl shadow-lg p-6">
     <header class="text-center mb-6">
       <h1 class="text-2xl md:text-3xl font-bold text-gray-800">ဘုရားဝတ်တက် စစ်ဆေးရေးဇယား</h1>
-      <p class="text-gray-600 mt-1 px-2">ခုံကိုနှိပ်ပြီး တက်ရောက်မှု အခြေအနေကို ပြောင်းနိုင်ပါသည်။</p>
-      <p class="text-xs text-gray-500 mt-2">( ၁ကြိမ်နှိပ် → ခွင့် | ၂ကြိမ်နှိပ် → ပျက်ကွက် | ၃ကြိမ် → တက်ရောက် )</p>
+      <p class="text-gray-600 mt-1">ခုံကိုနှိပ်ပြီး တက်ရောက်မှု အခြေအနေကို ပြောင်းနိုင်ပါသည်။</p>
+      <small class="text-xs text-gray-500">(ပထမ=Absent | ဒုတိယ=Leave | တတိယ=Attend )</small>
     </header>
-
     <div class="flex flex-col lg:flex-row gap-8">
-      <!-- Seating -->
       <div class="flex-grow">
-        <div class="bg-blue-600 text-white text-center py-2 rounded-t-lg font-bold shadow-md">
-          စာချဆရာတော်များနှင့် ကျမ်းပြီးသံဃာတော်များ
-        </div>
-        <div id="seating-chart-container" class="p-2 sm:p-4 bg-gray-50 border rounded-b-lg overflow-x-auto"></div>
-        <div class="mt-4 flex justify-center">
-          <button id="reset-button"
-            class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg shadow-md transition hover:scale-105">
-            အားလုံးကို Reset ပြန်လုပ်ရန်
+        <div class="bg-blue-600 text-white text-center py-2 rounded-t-lg font-bold shadow-md">စာချဆရာတော်များနှင့် ကျမ်းပြီးသံဃာတော်များ</div>
+        <div id="seating-chart-container" class="p-4 bg-gray-50 border rounded-b-lg overflow-x-auto"></div>
+        <div class="mt-4 flex gap-2 justify-center">
+          <button id="reset-button" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg shadow-md hover:scale-105 transition">
+            အားလုံး Reset ပြန်လုပ်မည်
+          </button>
+          <button id="excel-export" class="bg-green-500 hover:bg-green-600 text-white font-bold px-4 py-2 rounded hover:scale-105 transition">
+            Excel သို့ ထုတ်မည်
+          </button>
+          <button id="pdf-export" class="bg-red-500 hover:bg-red-600 text-white font-bold px-4 py-2 rounded hover:scale-105 transition">
+            PDF ထုတ်မည်
           </button>
         </div>
       </div>
-
-      <!-- Lists -->
       <div class="lg:w-1/3 xl:w-1/4 flex-shrink-0 space-y-6 mt-8 lg:mt-0">
-
-        <!-- Absent List -->
-        <div class="bg-white p-4 rounded-lg shadow-md border min-h-[120px]">
+        <div class="bg-white p-4 rounded-lg shadow-md border min-h-[100px]">
           <div class="flex justify-between items-start mb-4 border-b pb-2">
             <div>
-              <h2 class="text-xl font-bold text-red-700">ပျက်ကွက်စာရင်း</h2>
-              <p id="current-date-absent" class="text-sm text-gray-500"></p>
-            </div>
-            <button id="copy-absent-button"
-              class="bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-1 px-3 rounded-lg shadow-md">
-              ကူးယူရန်
-            </button>
-          </div>
-          <ul id="absent-list" class="space-y-2 text-gray-700"></ul>
-        </div>
-
-        <!-- Leave List -->
-        <div class="bg-white p-4 rounded-lg shadow-md border min-h-[120px]">
-          <div class="flex justify-between items-start mb-4 border-b pb-2">
-            <div>
-              <h2 class="text-xl font-bold text-yellow-700">ခွင့်ရှိသူစာရင်း</h2>
-              <p id="current-date-leave" class="text-sm text-gray-500"></p>
-            </div>
-            <button id="copy-leave-button"
-              class="bg-yellow-500 hover:bg-yellow-600 text-white text-xs font-bold py-1 px-3 rounded-lg shadow-md">
-              ကူးယူရန်
-            </button>
-          </div>
-          <ul id="on-leave-list" class="space-y-2 text-gray-700"></ul>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Tooltip -->
-  <div id="seat-tooltip" class="hidden absolute p-2 bg-gray-900 text-white text-sm rounded-md shadow-lg z-50"></div>
-
-  <!-- Admin Modal -->
-  <div id="admin-modal"
-    class="fixed inset-0 bg-gray-600 bg-opacity-75 items-center justify-center z-40 hidden">
-    <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-4xl modal-content">
-      <h2 class="text-2xl font-bold mb-4">ကျောင်းသားစာရင်း ပြင်ဆင်ရန်</h2>
-      <div class="overflow-auto border rounded-lg max-h-[60vh]">
-        <table class="min-w-full divide-y divide-gray-200 text-sm">
-          <thead class="bg-gray-50 sticky top-0">
-            <tr>
-              <th class="px-4 py-2 text-left">အတန်း</th>
-              <th class="px-4 py-2 text-left">ခုံ</th>
-              <th class="px-4 py-2 text-left">အမည်</th>
-              <th class="px-4 py-2 text-left">အဆောင်</th>
-              <th class="px-4 py-2 text-left">ကျောင်းထွက်</th>
-              <th class="px-4 py-2 text-left">ဖျက်ရန်</th>
-            </tr>
-          </thead>
-          <tbody id="admin-table-body" class="bg-white divide-y divide-gray-200"></tbody>
-        </table>
-      </div>
-      <div class="mt-6 flex justify-between items-center">
-        <button id="add-row-button" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">
-          အတန်းသစ်ထည့်ရန်
-        </button>
-        <div>
-          <button id="download-csv-button" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">
-            CSV ဒေါင်းလုဒ်
-          </button>
-          <button id="close-admin-modal"
-            class="ml-4 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">
-            ပိတ်ရန်
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Scripts -->
-  <script src="app.js"></script>
-</body>
-</html>
