@@ -21,7 +21,7 @@
         }
         .seat.absent {
             border: 3px solid #ef4444 !important;
-            transform: scale(1.05);
+            transform: scale(1.05 );
             box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
         }
         .seat.on-leave {
@@ -103,44 +103,45 @@
 
         // --- Constants ---
         const dormColors = {
-            'လှ': 'bg-sky-100 text-sky-800 border-sky-200',
-            'သိမ်': 'bg-teal-100 text-teal-800 border-teal-200',
-            'ပညာ': 'bg-indigo-100 text-indigo-800 border-indigo-200',
-            'အဘိ': 'bg-purple-100 text-purple-800 border-purple-200',
-            'ရ': 'bg-rose-100 text-rose-800 border-rose-200',
-            'ဋ': 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200',
-            'ပ': 'bg-pink-100 text-pink-800 border-pink-200',
-            'ဓံ': 'bg-lime-100 text-lime-800 border-lime-200',
-            'သာ': 'bg-emerald-100 text-emerald-800 border-emerald-200',
-            'ဓရ': 'bg-cyan-100 text-cyan-800 border-cyan-200',
-            'ဝိ': 'bg-orange-100 text-orange-800 border-orange-200',
-            'ရွှေ': 'bg-amber-100 text-amber-800 border-amber-200',
-            'မံ': 'bg-slate-200 text-slate-800 border-slate-300',
-            'လှိုင်': 'bg-green-100 text-green-800 border-green-200',
-            'ကြည်': 'bg-violet-100 text-violet-800 border-violet-200',
-            'default': 'bg-gray-200 text-gray-800 border-gray-300'
+            'လှ': 'bg-sky-100 text-sky-800 border-sky-200', 'သိမ်': 'bg-teal-100 text-teal-800 border-teal-200',
+            'ပညာ': 'bg-indigo-100 text-indigo-800 border-indigo-200', 'အဘိ': 'bg-purple-100 text-purple-800 border-purple-200',
+            'ရ': 'bg-rose-100 text-rose-800 border-rose-200', 'ဋ': 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200',
+            'ပ': 'bg-pink-100 text-pink-800 border-pink-200', 'ဓံ': 'bg-lime-100 text-lime-800 border-lime-200',
+            'သာ': 'bg-emerald-100 text-emerald-800 border-emerald-200', 'ဓရ': 'bg-cyan-100 text-cyan-800 border-cyan-200',
+            'ဝိ': 'bg-orange-100 text-orange-800 border-orange-200', 'ရွှေ': 'bg-amber-100 text-amber-800 border-amber-200',
+            'မံ': 'bg-slate-200 text-slate-800 border-slate-300', 'လှိုင်': 'bg-green-100 text-green-800 border-green-200',
+            'ကြည်': 'bg-violet-100 text-violet-800 border-violet-200', 'default': 'bg-gray-200 text-gray-800 border-gray-300'
         };
 
         // --- State ---
-        let studentDataByClass = {}; // Data will be grouped by class
+        let studentDataByClass = {};
 
         // --- Utility Functions ---
         async function loadStudentData() {
             try {
-                const response = await fetch('students.json');
-                const students = await response.json();
+                // JSON အစား CSV ဖိုင်ကို fetch လုပ်ပါ
+                const response = await fetch('students.csv');
+                const csvText = await response.text();
+                
                 studentDataByClass = {};
                 
-                students.forEach(student => {
-                    const { Class: classNum, Seat: seatNum, Name: name, School: school } = student;
+                // CSV text ကို \n (new line) ဖြင့် အကြောင်းအရာများခွဲပါ
+                const lines = csvText.trim().split('\n');
+                
+                // ပထမဆုံးလိုင်း (header) ကို ကျော်သွားရန် slice(1) ကိုသုံးပါ
+                const dataLines = lines.slice(1);
+
+                dataLines.forEach(line => {
+                    // ကော်မာ (,) ဖြင့် အချက်အလက်များခွဲပါ
+                    const [classNum, seatNum, name, school] = line.split(',');
 
                     if (classNum && seatNum && name) {
                         if (!studentDataByClass[classNum]) {
                             studentDataByClass[classNum] = {};
                         }
                         studentDataByClass[classNum][seatNum] = {
-                            name: name,
-                            school: school,
+                            name: name.trim(),
+                            school: school ? school.trim() : '', // အဆောင်မရှိပါက empty string ထားပါ
                         };
                     }
                 });
@@ -148,8 +149,8 @@
                 createSeatingChart();
                 updateAllLists();
             } catch (error) {
-                console.error('Error loading JSON:', error);
-                seatingChartContainer.innerHTML = '<p class="text-red-500 text-center">ကျောင်းသားစာရင်းဖိုင် (JSON) ကို ဖတ်ရာတွင် အမှားအယွင်းဖြစ်ပွားပါသည်။</p>';
+                console.error('Error loading CSV:', error);
+                seatingChartContainer.innerHTML = '<p class="text-red-500 text-center">ကျောင်းသားစာရင်းဖိုင် (CSV) ကို ဖတ်ရာတွင် အမှားအယွင်းဖြစ်ပွားပါသည်။</p>';
             }
         }
 
@@ -177,35 +178,29 @@
                 }
 
                 const classData = studentDataByClass[classNum];
-                
-                // MODIFIED: Dynamically find the max number of seats for the current class
                 const seatNumbersInClass = Object.keys(classData).map(Number);
                 const maxSeatsInThisRow = seatNumbersInClass.length > 0 ? Math.max(...seatNumbersInClass) : 0;
 
                 const rowContainer = document.createElement('div');
-                const rowLabel = document.createElement('div');
-                rowLabel.classList.add('font-bold', 'text-gray-700', 'mb-2', 'text-lg');
-                rowLabel.textContent = `အတန်း - ${classNum}`;
-                rowContainer.appendChild(rowLabel);
-
+                rowContainer.innerHTML = `<div class="font-bold text-gray-700 mb-2 text-lg">အတန်း - ${classNum}</div>`;
+                
                 const rowGrid = document.createElement('div');
                 rowGrid.classList.add('grid-container');
-                // MODIFIED: Dynamically set the number of columns for this specific row's grid
                 rowGrid.style.gridTemplateColumns = `repeat(${maxSeatsInThisRow > 0 ? maxSeatsInThisRow : 1}, minmax(0, 1fr))`;
-
 
                 for (let seatNum = 1; seatNum <= maxSeatsInThisRow; seatNum++) {
                     const student = classData[seatNum];
                     const seatElement = document.createElement('div');
-                    seatElement.classList.add('seat', 'h-24', 'flex', 'flex-col', 'items-center', 'justify-center', 'rounded-md', 'p-1', 'transition-all', 'duration-200', 'ease-in-out', 'text-center', 'border');
+                    seatElement.className = 'seat h-24 flex flex-col items-center justify-center rounded-md p-1 transition-all duration-200 ease-in-out text-center border';
                     seatElement.dataset.classNum = classNum;
                     seatElement.dataset.seatNum = seatNum;
 
                     if (student) {
                         const colorClasses = (dormColors[student.school] || dormColors.default).split(' ');
-                        seatElement.innerHTML = `<span class="font-bold text-sm">${seatNum}</span><span class="text-[10px] leading-tight mt-1">${student.name} (${student.school})</span>`;
+                        const studentInfo = student.school ? `${student.name} (${student.school})` : student.name;
+                        seatElement.innerHTML = `<span class="font-bold text-sm">${seatNum}</span><span class="text-[10px] leading-tight mt-1">${studentInfo}</span>`;
                         seatElement.classList.add(...colorClasses, 'cursor-pointer', 'transform', 'hover:scale-110');
-                        seatElement.dataset.name = `${student.name} (${student.school})`;
+                        seatElement.dataset.name = studentInfo;
                         seatElement.addEventListener('click', cycleAttendanceState);
                         seatElement.addEventListener('mouseover', showTooltip);
                         seatElement.addEventListener('mouseout', hideTooltip);
@@ -243,14 +238,8 @@
         function updateList(state, listElement, buttonElement) {
             listElement.innerHTML = '';
             const seats = document.querySelectorAll(`.seat.${state}`);
-            const stateMessages = {
-                'absent': 'ပျက်ကွက်သူ မရှိပါ။',
-                'on-leave': 'ခွင့်ရှိသူ မရှိပါ။'
-            };
-            const itemColors = {
-                'absent': 'bg-red-50 text-red-800',
-                'on-leave': 'bg-yellow-50 text-yellow-800'
-            };
+            const stateMessages = { 'absent': 'ပျက်ကွက်သူ မရှိပါ။', 'on-leave': 'ခွင့်ရှိသူ မရှိပါ။' };
+            const itemColors = { 'absent': 'bg-red-50 text-red-800', 'on-leave': 'bg-yellow-50 text-yellow-800' };
 
             if (seats.length === 0) {
                 listElement.innerHTML = `<li class="text-gray-500">${stateMessages[state]}</li>`;
@@ -271,10 +260,7 @@
                 sortedSeats.forEach(seat => {
                     const listItem = document.createElement('li');
                     listItem.className = `p-2 rounded-md text-sm ${itemColors[state]}`;
-                    const classNum = seat.dataset.classNum;
-                    const seatNum = seat.dataset.seatNum;
-                    const studentName = seat.dataset.name || '';
-                    listItem.textContent = `အတန်း ${classNum}၊ ခုံ ${seatNum}: ${studentName}`;
+                    listItem.textContent = `အတန်း ${seat.dataset.classNum}၊ ခုံ ${seat.dataset.seatNum}: ${seat.dataset.name || ''}`;
                     listElement.appendChild(listItem);
                 });
             }
@@ -291,8 +277,8 @@
                             <p class="text-lg text-gray-500">တက်ရောက်မှုအားလုံးကို ပြန်လည်သတ်မှတ်ရန် သေချာပါသလား။</p>
                         </div>
                         <div class="flex justify-center mt-4">
-                            <button id="confirm-reset" class="px-4 py-2 bg-red-500 text-white text-base font-medium rounded-md w-auto shadow-sm hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-300">အတည်ပြုသည်</button>
-                            <button id="cancel-reset" class="ml-4 px-4 py-2 bg-gray-300 text-gray-800 text-base font-medium rounded-md w-auto shadow-sm hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300">မပြုလုပ်ပါ</button>
+                            <button id="confirm-reset" class="px-4 py-2 bg-red-500 text-white text-base font-medium rounded-md w-auto shadow-sm hover:bg-red-600">အတည်ပြုသည်</button>
+                            <button id="cancel-reset" class="ml-4 px-4 py-2 bg-gray-300 text-gray-800 text-base font-medium rounded-md w-auto shadow-sm hover:bg-gray-400">မပြုလုပ်ပါ</button>
                         </div>
                     </div>
                 </div>
@@ -300,12 +286,7 @@
             document.body.appendChild(modal);
 
             document.getElementById('confirm-reset').addEventListener('click', () => {
-                const allSeats = document.querySelectorAll('.seat');
-                allSeats.forEach(seat => {
-                    if (seat.dataset.name) {
-                        seat.classList.remove('absent', 'on-leave');
-                    }
-                });
+                document.querySelectorAll('.seat').forEach(seat => seat.classList.remove('absent', 'on-leave'));
                 updateAllLists();
                 document.body.removeChild(modal);
             });
@@ -314,7 +295,6 @@
                 document.body.removeChild(modal);
             });
         }
-
 
         // --- Copy Functions ---
         function copyList(state, buttonElement) {
@@ -329,44 +309,26 @@
                 listText += `${item.textContent}\n`;
             });
 
-            const textArea = document.createElement("textarea");
-            textArea.value = listText.trim();
-            textArea.style.position = "fixed";
-            textArea.style.top = "-9999px";
-            textArea.style.left = "-9999px";
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
-
-            try {
-                document.execCommand('copy');
+            navigator.clipboard.writeText(listText.trim()).then(() => {
                 const originalText = buttonElement.textContent;
-                const originalClasses = buttonElement.className;
+                buttonElement.className = buttonElement.className.replace(/bg-(red|yellow)-500/, 'bg-blue-500');
                 buttonElement.textContent = 'ကူးယူပြီးပါပြီ!';
-                buttonElement.className = buttonElement.className.replace(/bg-(red|yellow)-500\shover:bg-(red|yellow)-600/, 'bg-blue-500');
                 setTimeout(() => {
                     buttonElement.textContent = originalText;
-                    buttonElement.className = originalClasses;
+                    buttonElement.className = buttonElement.className.replace(/bg-blue-500/, `bg-${state === 'absent' ? 'red' : 'yellow'}-500`);
                 }, 2000);
-            } catch (err) {
-                console.error('Failed to copy: ', err);
-            }
-            document.body.removeChild(textArea);
+            }).catch(err => console.error('Failed to copy: ', err));
         }
 
         function showTooltip(event) {
             const seat = event.currentTarget;
-            const studentName = seat.dataset.name;
-            if (studentName) {
-                tooltip.textContent = studentName;
+            if (seat.dataset.name) {
+                tooltip.textContent = seat.dataset.name;
                 tooltip.classList.remove('hidden');
             }
         }
 
-        function hideTooltip() {
-            tooltip.classList.add('hidden');
-        }
-
+        function hideTooltip() { tooltip.classList.add('hidden'); }
         function moveTooltip(event) {
             tooltip.style.left = `${event.pageX + 15}px`;
             tooltip.style.top = `${event.pageY + 15}px`;
