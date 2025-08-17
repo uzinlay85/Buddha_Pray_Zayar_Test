@@ -1,16 +1,16 @@
 body {
   font-family: 'Pyidaungsu', sans-serif;
 }
-.grid-cols-16, .grid-container {
+.grid-container {
   display: grid;
   gap: 0.5rem;
   grid-template-columns: repeat(16, minmax(0, 1fr));
 }
 @media (max-width: 1024px) {
-  .grid-cols-16, .grid-container { grid-template-columns: repeat(8, 1fr); }
+  .grid-container { grid-template-columns: repeat(8, 1fr); }
 }
 @media (max-width: 640px) {
-  .grid-cols-16, .grid-container { grid-template-columns: repeat(4, 1fr); }
+  .grid-container { grid-template-columns: repeat(4, 1fr); }
   .seat .font-bold { font-size: 0.95rem; }
   .seat .leading-tight { font-size: 11px; }
 }
