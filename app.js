@@ -11,22 +11,42 @@ const currentDateLeaveEl = document.getElementById("current-date-leave");
 const pdfExportBtn = document.getElementById("pdf-export");
 const excelExportBtn = document.getElementById("excel-export");
 
-// Constants
-const ROWS = 15;
-const SEATS_PER_ROW = 16;
+// Config
+const ROWS = 5;
+const SEATS_PER_ROW = 8;
 
-// Example student data
-const studentData = {
-  "2-1":"ဦးဇာနိက\n(လှ)","2-2":"ဦးဝိမလာစာ\n(လှ)",
-  "2-3":"ဦးကုမာရ\n(လှ)","2-4":"ဦးဝိဝေကာနန္ဒာ(လှ)"
-  // ...နေရာကုန်ထည့်ပါ။
-};
 const dormColors = {
   "လှ":"bg-sky-100 text-sky-800 border-sky-200",
   "သိမ်":"bg-teal-100 text-teal-800 border-teal-200",
-  default:"bg-gray-200 text-gray-800 border-gray-300"
+  "ပညာ":"bg-indigo-100 text-indigo-800 border-indigo-200",
+  "အဘိ":"bg-purple-100 text-purple-800 border-purple-200",
+  "ရ":"bg-rose-100 text-rose-800 border-rose-200",
+  "ဋ":"bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200",
+  "ပ":"bg-pink-100 text-pink-800 border-pink-200",
+  "default":"bg-gray-200 text-gray-800 border-gray-300"
 };
 
+const studentData = {
+  "2-1": "ဦးဇာနိက\n(လှ)",
+  "2-2": "ဦးဝိမလာစာ\n(သိမ်)",
+  "2-3": "ဦးအာဒိစ္စ\n(ပညာ)",
+  "2-4": "ဦးနာဂသေန\n(အဘိ)",
+  "2-5": "ဦးကိတ္တိသာရ\n(ရ)",
+  "2-6": "ဦးသဇ္ဇနာ\n(ဋ)",
+  "2-7": "ဦးခေမာစာရ\n(ပ)",
+  "2-8": "ဦးဝီရသေဋ္ဌာ\n(လှ)",
+  "3-1": "ဦးဇဝန\n(သိမ်)",
+  "3-2": "ဦးပဒုမ\n(ပညာ)",
+  "3-3": "ဦးအာစာရ\n(အဘိ)",
+  "3-4": "ဦးခေမာစာရ\n(ရ)",
+  "3-5": "ဦးဥတ္တမ\n(ဋ)",
+  "3-6": "ဦးတေဇသီရိ\n(ပ)",
+  "3-7": "ဦးဝိသာရ\n(လှ)",
+  "3-8": "ဦးကုမာရ\n(သိမ်)",
+  // demo data only, expand for all rows/seats!
+};
+
+// Init
 document.addEventListener("DOMContentLoaded",()=>{
   createSeatingChart();
   loadAttendanceFromLocal();
@@ -36,7 +56,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   currentDateLeaveEl.textContent = today;
 });
 
-// Seating Chart Build
+// Seating Chart + color by dorm
 function createSeatingChart(){
   seatingChartContainer.innerHTML = "";
   for(let row=2;row<=ROWS;row++){
@@ -53,12 +73,12 @@ function createSeatingChart(){
       if(name){
         const displayName = name.split("\n")[0];
         const dormMatch = name.match(/\((.*?)\)/);
-        const dorm=dormMatch?dormMatch[1]:null;
+        const dorm=dormMatch?dormMatch[1].trim():null;
+        const colorClasses = (dorm ? (dormColors[dorm] || dormColors.default) : dormColors.default).split(' ');
         div.innerHTML = `<span class="font-bold text-sm">${seat}</span>
                          <span class="text-[10px] mt-1">${displayName}</span>
                          <span class="text-[9px] text-gray-500">${dorm ? `(${dorm})`:""}</span>`;
-        const colorCls = (dormColors[dorm]||dormColors.default).split(" ");
-        div.classList.add(...colorCls,"cursor-pointer","hover:scale-110");
+        div.classList.add(...colorClasses,"cursor-pointer","hover:scale-110");
         div.dataset.name = name.replace(/\n/g," ");
         div.addEventListener("click",cycleAttendanceState);
         div.addEventListener("mouseover",showTooltip);
@@ -182,13 +202,16 @@ function loadAttendanceFromLocal(){
 
 // === Export Excel (CSV) ===
 excelExportBtn.addEventListener("click",()=>{
-  let csv = "Row,Seat,Name,Status\n";
+  let csv = "Row,Seat,Name,Dorm,Status\n";
   document.querySelectorAll(".seat").forEach(seat=>{
     if(seat.dataset.name){
       let status="Attend";
       if(seat.classList.contains("absent")) status="Absent";
       else if(seat.classList.contains("on-leave")) status="Leave";
-      csv+=`${seat.dataset.row},${seat.dataset.seat},"${seat.dataset.name}",${status}\n`;
+      // parse dorm
+      const dormMatch = seat.dataset.name.match(/\((.*?)\)/);
+      const dorm = dormMatch ? dormMatch[1].trim() : "";
+      csv+=`${seat.dataset.row},${seat.dataset.seat},"${seat.dataset.name}","${dorm}",${status}\n`;
     }
   });
   const blob=new Blob([csv],{type:"text/csv"});
@@ -203,6 +226,7 @@ pdfExportBtn.addEventListener("click",()=>{
   const doc = new window.jspdf.jsPDF();
   let y = 10;
   doc.setFont("Pyidaungsu");
+  doc.setFontSize(14);
   doc.text("ပျက်ကွက်စာရင်း",10,y); y+=10;
   let i=1;
   absentList.querySelectorAll("li:not(.text-gray-500)").forEach(li=>{
