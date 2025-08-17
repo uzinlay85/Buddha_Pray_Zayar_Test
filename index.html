@@ -15,7 +15,6 @@
         .seat.empty { background-color: #f3f4f6; border: 1px dashed #d1d5db; }
         .seat.left { background-color: #e5e7eb !important; color: #6b7280 !important; border-color: #d1d5db !important; cursor: not-allowed !important; }
         .list-container { min-height: 100px; transition: height 0.3s ease; }
-        /* Admin Modal Styles */
         #admin-modal { display: none; }
         #admin-modal.show { display: flex; }
         .modal-content { max-height: 80vh; }
@@ -34,7 +33,8 @@
         <header class="text-center mb-6">
             <h1 class="text-2xl md:text-3xl font-bold text-gray-800">ဘုရားဝတ်တက် စစ်ဆေးရေးဇယား</h1>
             <p class="text-gray-600 mt-1">ခုံများကို နှိပ်၍ တက်ရောက်မှု အခြေအနေ ပြောင်းလဲနိုင်ပါသည်။</p>
-            <p class="text-xs text-gray-500 mt-2">( ပထမကလစ် = ပျက်ကွက် | ဒုတိယကလစ် = ခွင့်ရှိသူ | တတိယကလစ် = တက်ရောက် )</p>
+            <!-- Updated Click Order Text -->
+            <p class="text-xs text-gray-500 mt-2">( ပထမကလစ် = ခွင့်ရှိသူ | ဒုတိယကလစ် = ပျက်ကွက် | တတိယကလစ် = တက်ရောက် )</p>
         </header>
 
         <div class="flex flex-col lg:flex-row gap-8">
@@ -211,19 +211,30 @@
             }
         }
 
-        // --- Attendance & List Management (No changes from previous version) ---
-        function cycleAttendanceState(event) { /* ... same as before ... */ }
-        function updateAllLists() { /* ... same as before ... */ }
-        function updateList(state, listElement, buttonElement) { /* ... same as before ... */ }
-        function resetAllSeats() { /* ... same as before ... */ }
-        function copyList(state, buttonElement) { /* ... same as before ... */ }
-        function showTooltip(event) { /* ... same as before ... */ }
-        function hideTooltip() { /* ... same as before ... */ }
-        function moveTooltip(event) { /* ... same as before ... */ }
-        function getBurmeseDate() { /* ... same as before ... */ }
-        // (Copying the functions here for completeness)
-        function getBurmeseDate() { const today = new Date(); const year = today.getFullYear(); const month = today.getMonth(); const day = today.getDate(); const burmeseMonths = ["ဇန်နဝါရီ", "ဖေဖော်ဝါရီ", "မတ်", "ဧပြီ", "မေ", "ဇွန်", "ဇူလိုင်", "ဩဂုတ်", "စက်တင်ဘာ", "အောက်တိုဘာ", "နိုဝင်ဘာ", "ဒီဇင်ဘာ"]; const burmeseNumerals = ["၀", "၁", "၂", "၃", "၄", "၅", "၆", "၇", "၈", "၉"]; const toBurmeseNumeral = (num) => String(num).split('').map(digit => burmeseNumerals[parseInt(digit)]).join(''); return `${burmeseMonths[month]}လ ${toBurmeseNumeral(day)} ရက်၊ ${toBurmeseNumeral(year)}`; }
-        function cycleAttendanceState(event) { const seat = event.currentTarget; if (seat.classList.contains('absent')) { seat.classList.remove('absent'); seat.classList.add('on-leave'); } else if (seat.classList.contains('on-leave')) { seat.classList.remove('on-leave'); } else { seat.classList.add('absent'); } updateAllLists(); }
+        // --- Attendance & List Management ---
+        
+        /**
+         * MODIFIED: Swapped the click order.
+         * 1st Click -> On Leave (ခွင့်)
+         * 2nd Click -> Absent (ပျက်ကွက်)
+         * 3rd Click -> Present (ပြန်ရောက်)
+         */
+        function cycleAttendanceState(event) {
+            const seat = event.currentTarget;
+            if (seat.classList.contains('on-leave')) {
+                // Currently on-leave, switch to absent
+                seat.classList.remove('on-leave');
+                seat.classList.add('absent');
+            } else if (seat.classList.contains('absent')) {
+                // Currently absent, switch to present (remove all)
+                seat.classList.remove('absent');
+            } else {
+                // Currently present, switch to on-leave
+                seat.classList.add('on-leave');
+            }
+            updateAllLists();
+        }
+
         function updateAllLists() { updateList('absent', absentList, copyAbsentButton); updateList('on-leave', onLeaveList, copyLeaveButton); }
         function updateList(state, listElement, buttonElement) { listElement.innerHTML = ''; const seats = document.querySelectorAll(`.seat.${state}`); const stateMessages = { 'absent': 'ပျက်ကွက်သူ မရှိပါ။', 'on-leave': 'ခွင့်ရှိသူ မရှိပါ။' }; const itemColors = { 'absent': 'bg-red-50 text-red-800', 'on-leave': 'bg-yellow-50 text-yellow-800' }; if (seats.length === 0) { listElement.innerHTML = `<li class="text-gray-500">${stateMessages[state]}</li>`; buttonElement.disabled = true; buttonElement.classList.add('opacity-50', 'cursor-not-allowed'); } else { buttonElement.disabled = false; buttonElement.classList.remove('opacity-50', 'cursor-not-allowed'); const sortedSeats = Array.from(seats).sort((a, b) => { const classA = parseInt(a.dataset.classNum, 10); const seatA = parseInt(a.dataset.seatNum, 10); const classB = parseInt(b.dataset.classNum, 10); const seatB = parseInt(b.dataset.seatNum, 10); if (classA !== classB) return classA - classB; return seatA - seatB; }); sortedSeats.forEach(seat => { const listItem = document.createElement('li'); listItem.className = `p-2 rounded-md text-sm ${itemColors[state]}`; listItem.textContent = `အတန်း ${seat.dataset.classNum}၊ ခုံ ${seat.dataset.seatNum}: ${seat.dataset.name || ''}`; listElement.appendChild(listItem); }); } }
         function resetAllSeats() { document.querySelectorAll('.seat:not(.left)').forEach(seat => seat.classList.remove('absent', 'on-leave')); updateAllLists(); }
@@ -231,100 +242,18 @@
         function showTooltip(event) { const seat = event.currentTarget; if (seat.dataset.name) { tooltip.textContent = seat.dataset.name; tooltip.classList.remove('hidden'); } }
         function hideTooltip() { tooltip.classList.add('hidden'); }
         function moveTooltip(event) { tooltip.style.left = `${event.pageX + 15}px`; tooltip.style.top = `${event.pageY + 15}px`; }
+        function getBurmeseDate() { const today = new Date(); const year = today.getFullYear(); const month = today.getMonth(); const day = today.getDate(); const burmeseMonths = ["ဇန်နဝါရီ", "ဖေဖော်ဝါရီ", "မတ်", "ဧပြီ", "မေ", "ဇွန်", "ဇူလိုင်", "ဩဂုတ်", "စက်တင်ဘာ", "အောက်တိုဘာ", "နိုဝင်ဘာ", "ဒီဇင်ဘာ"]; const burmeseNumerals = ["၀", "၁", "၂", "၃", "၄", "၅", "၆", "၇", "၈", "၉"]; const toBurmeseNumeral = (num) => String(num).split('').map(digit => burmeseNumerals[parseInt(digit)]).join(''); return `${burmeseMonths[month]}လ ${toBurmeseNumeral(day)} ရက်၊ ${toBurmeseNumeral(year)}`; }
 
         // --- Admin Panel Logic ---
-        function openAdminPanel() {
-            populateAdminTable();
-            adminModal.classList.add('show');
-        }
-
-        function closeAdminPanel() {
-            adminModal.classList.remove('show');
-        }
-
-        function populateAdminTable() {
-            adminTableBody.innerHTML = '';
-            allStudents.sort((a, b) => {
-                const classA = parseInt(a.Class, 10);
-                const seatA = parseInt(a.Seat, 10);
-                const classB = parseInt(b.Class, 10);
-                const seatB = parseInt(b.Seat, 10);
-                if (classA !== classB) return classA - classB;
-                return seatA - seatB;
-            }).forEach((student, index) => {
-                const row = createAdminTableRow(student, index);
-                adminTableBody.appendChild(row);
-            });
-        }
-
-        function createAdminTableRow(student, index) {
-            const row = document.createElement('tr');
-            row.dataset.index = index;
-            row.innerHTML = `
-                <td class="px-4 py-2"><input type="text" value="${student.Class || ''}" class="table-input" data-field="Class"></td>
-                <td class="px-4 py-2"><input type="text" value="${student.Seat || ''}" class="table-input" data-field="Seat"></td>
-                <td class="px-4 py-2"><input type="text" value="${student.Name || ''}" class="table-input" data-field="Name"></td>
-                <td class="px-4 py-2"><input type="text" value="${student.School || ''}" class="table-input" data-field="School"></td>
-                <td class="px-4 py-2 text-center"><input type="checkbox" ${student.Left === 'true' ? 'checked' : ''} class="h-5 w-5" data-field="Left"></td>
-                <td class="px-4 py-2 text-center"><button class="text-red-500 hover:text-red-700 delete-row-button">ဖျက်ရန်</button></td>
-            `;
-            row.querySelector('.delete-row-button').addEventListener('click', () => {
-                row.remove();
-            });
-            return row;
-        }
-
-        addRowButton.addEventListener('click', () => {
-            const newStudent = { Class: '', Seat: '', Name: '', School: '', Left: 'false' };
-            const newIndex = adminTableBody.rows.length;
-            const row = createAdminTableRow(newStudent, newIndex);
-            adminTableBody.appendChild(row);
-        });
-
-        downloadCsvButton.addEventListener('click', () => {
-            const headers = ['Class', 'Seat', 'Name', 'School', 'Left'];
-            let csvContent = headers.join(',') + '\n';
-
-            const rows = Array.from(adminTableBody.rows);
-            rows.forEach(row => {
-                const classVal = row.querySelector('[data-field="Class"]').value;
-                const seatVal = row.querySelector('[data-field="Seat"]').value;
-                const nameVal = row.querySelector('[data-field="Name"]').value;
-                const schoolVal = row.querySelector('[data-field="School"]').value;
-                const leftVal = row.querySelector('[data-field="Left"]').checked;
-                
-                if (nameVal) { // Only add row if name is not empty
-                    csvContent += `"${classVal}","${seatVal}","${nameVal}","${schoolVal}","${leftVal}"\n`;
-                }
-            });
-
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            const url = URL.createObjectURL(blob);
-            link.setAttribute("href", url);
-            link.setAttribute("download", "students_updated.csv");
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            // Reload the main page with new data after download
-            setTimeout(() => {
-                alert("CSV ဖိုင်ကို ဒေါင်းလုဒ်လုပ်ပြီးပါပြီ။ စာမျက်နှာကို အသစ်ပြန်လည်စတင်ပါမည်။");
-                closeAdminPanel();
-                loadStudentData();
-            }, 500);
-        });
+        function openAdminPanel() { populateAdminTable(); adminModal.classList.add('show'); }
+        function closeAdminPanel() { adminModal.classList.remove('show'); }
+        function populateAdminTable() { adminTableBody.innerHTML = ''; allStudents.sort((a, b) => { const classA = parseInt(a.Class, 10); const seatA = parseInt(a.Seat, 10); const classB = parseInt(b.Class, 10); const seatB = parseInt(b.Seat, 10); if (classA !== classB) return classA - classB; return seatA - seatB; }).forEach((student, index) => { const row = createAdminTableRow(student, index); adminTableBody.appendChild(row); }); }
+        function createAdminTableRow(student, index) { const row = document.createElement('tr'); row.dataset.index = index; row.innerHTML = ` <td class="px-4 py-2"><input type="text" value="${student.Class || ''}" class="table-input" data-field="Class"></td> <td class="px-4 py-2"><input type="text" value="${student.Seat || ''}" class="table-input" data-field="Seat"></td> <td class="px-4 py-2"><input type="text" value="${student.Name || ''}" class="table-input" data-field="Name"></td> <td class="px-4 py-2"><input type="text" value="${student.School || ''}" class="table-input" data-field="School"></td> <td class="px-4 py-2 text-center"><input type="checkbox" ${student.Left === 'true' ? 'checked' : ''} class="h-5 w-5" data-field="Left"></td> <td class="px-4 py-2 text-center"><button class="text-red-500 hover:text-red-700 delete-row-button">ဖျက်ရန်</button></td> `; row.querySelector('.delete-row-button').addEventListener('click', () => { row.remove(); }); return row; }
+        addRowButton.addEventListener('click', () => { const newStudent = { Class: '', Seat: '', Name: '', School: '', Left: 'false' }; const newIndex = adminTableBody.rows.length; const row = createAdminTableRow(newStudent, newIndex); adminTableBody.appendChild(row); });
+        downloadCsvButton.addEventListener('click', () => { const headers = ['Class', 'Seat', 'Name', 'School', 'Left']; let csvContent = headers.join(',') + '\n'; const rows = Array.from(adminTableBody.rows); rows.forEach(row => { const classVal = row.querySelector('[data-field="Class"]').value; const seatVal = row.querySelector('[data-field="Seat"]').value; const nameVal = row.querySelector('[data-field="Name"]').value; const schoolVal = row.querySelector('[data-field="School"]').value; const leftVal = row.querySelector('[data-field="Left"]').checked; if (nameVal) { csvContent += `"${classVal}","${seatVal}","${nameVal}","${schoolVal}","${leftVal}"\n`; } }); const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' }); const link = document.createElement("a"); const url = URL.createObjectURL(blob); link.setAttribute("href", url); link.setAttribute("download", "students_updated.csv"); link.style.visibility = 'hidden'; document.body.appendChild(link); link.click(); document.body.removeChild(link); setTimeout(() => { alert("CSV ဖိုင်ကို ဒေါင်းလုဒ်လုပ်ပြီးပါပြီ။ စာမျက်နှာကို အသစ်ပြန်လည်စတင်ပါမည်။"); closeAdminPanel(); loadStudentData(); }, 500); });
 
         // --- Event Listeners ---
-        adminPanelButton.addEventListener('click', () => {
-            const password = prompt("Admin Password ကိုထည့်ပါ:");
-            if (password === "Ashin@135") {
-                openAdminPanel();
-            } else if (password !== null) {
-                alert("Password မှားယွင်းနေပါသည်။");
-            }
-        });
+        adminPanelButton.addEventListener('click', () => { const password = prompt("Admin Password ကိုထည့်ပါ:"); if (password === "Ashin@135") { openAdminPanel(); } else if (password !== null) { alert("Password မှားယွင်းနေပါသည်။"); } });
         closeAdminModalButton.addEventListener('click', closeAdminPanel);
         resetButton.addEventListener('click', resetAllSeats);
         copyAbsentButton.addEventListener('click', () => copyList('absent', copyAbsentButton));
